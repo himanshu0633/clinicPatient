@@ -1,0 +1,182 @@
+{
+  "info": {
+    "name": "Clinic Backend - Visit Flow (Step-by-Step)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Flow-based Postman collection for ClinicBackend APIs with expanded Patient APIs (including non-screen flows)."
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const now = new Date();",
+          "const yyyyMmDd = now.toISOString().slice(0, 10);",
+          "const plusDays = (d) => { const x = new Date(now); x.setUTCDate(x.getUTCDate() + d); return x.toISOString().slice(0, 10); };",
+          "pm.collectionVariables.set('today', yyyyMmDd);",
+          "pm.collectionVariables.set('followUpDate', plusDays(Number(pm.collectionVariables.get('medicineDays') || 5)));",
+          "pm.collectionVariables.set('revisitDate', plusDays(7));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "superAdminEmail", "value": "superadmin@clinicapp.com" },
+    { "key": "superAdminPassword", "value": "Admin@123" },
+    { "key": "clinicAdminEmail", "value": "clinicadmin@example.com" },
+    { "key": "clinicAdminPassword", "value": "Admin@123" },
+    { "key": "clinicName", "value": "Flow Demo Clinic" },
+    { "key": "clinicPublicEmail", "value": "flowclinic@example.com" },
+    { "key": "clinicPublicPhone", "value": "9898989811" },
+    { "key": "superAdminToken", "value": "" },
+    { "key": "clinicToken", "value": "" },
+    { "key": "clinicId", "value": "" },
+    { "key": "patientId", "value": "" },
+    { "key": "visitId", "value": "" },
+    { "key": "serialNo", "value": "1" },
+    { "key": "testId", "value": "" },
+    { "key": "medicineId", "value": "" },
+    { "key": "medicineDays", "value": "5" },
+    { "key": "today", "value": "2026-04-22" },
+    { "key": "followUpDate", "value": "2026-04-27" },
+    { "key": "revisitDate", "value": "2026-04-29" },
+    { "key": "doctor1Email", "value": "doctor.one@example.com" },
+    { "key": "doctor1Password", "value": "Doc@123" },
+    { "key": "doctor2Email", "value": "doctor.two@example.com" },
+    { "key": "doctor2Password", "value": "Doc@123" },
+    { "key": "doctor1Id", "value": "" },
+    { "key": "doctor2Id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0) Health + Auth Setup",
+      "item": [
+        { "name": "Health Check", "request": { "method": "GET", "url": "{{baseUrl}}/api/health" } },
+        {
+          "name": "Super Admin Login",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const json = pm.response.json();", "if (json?.token) pm.collectionVariables.set('superAdminToken', json.token);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/super-admin/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{superAdminEmail}}\",\n  \"password\": \"{{superAdminPassword}}\"\n}" }
+          }
+        },
+        {
+          "name": "Clinic Admin Login",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const json = pm.response.json();", "if (json?.token) pm.collectionVariables.set('clinicToken', json.token);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/clinic-admin/login",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{clinicAdminEmail}}\",\n  \"password\": \"{{clinicAdminPassword}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1) Patient APIs (All - Including Non-Screen APIs)",
+      "item": [
+        {
+          "name": "Register Patient (Explicit)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const json = pm.response.json();", "const pid = json?.data?._id || json?.data?.patient?._id;", "if (pid) pm.collectionVariables.set('patientId', pid);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{clinicToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/patients/register",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Flow Demo Patient\",\n  \"age\": 31,\n  \"gender\": \"male\",\n  \"email\": \"patient.flow@example.com\",\n  \"phone\": \"9898989898\",\n  \"address\": \"Flow Street\"\n}" }
+          }
+        },
+        {
+          "name": "Create Patient",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const json = pm.response.json();", "const pid = json?.data?.patient?._id || json?.data?._id;", "if (pid) pm.collectionVariables.set('patientId', pid);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{clinicToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/patients",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Flow Demo Patient\",\n  \"age\": 31,\n  \"gender\": \"male\",\n  \"email\": \"patient.flow@example.com\",\n  \"phone\": \"9898989898\",\n  \"address\": \"Flow Street\"\n}" }
+          }
+        },
+        {
+          "name": "Get Patients",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{clinicToken}}" }],
+            "url": "{{baseUrl}}/api/patients"
+          }
+        },
+        {
+          "name": "Get Patient By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{clinicToken}}" }],
+            "url": "{{baseUrl}}/api/patients/{{patientId}}"
+          }
+        },
+        {
+          "name": "Search Patient by Phone",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{clinicToken}}" }],
+            "url": "{{baseUrl}}/api/patients/search?phone=9898989898"
+          }
+        },
+        {
+          "name": "Update Patient",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{clinicToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/patients/{{patientId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"address\": \"Updated Flow Street\",\n  \"age\": 32\n}" }
+          }
+        },
+        {
+          "name": "Patient Timeline",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{clinicToken}}" }],
+            "url": "{{baseUrl}}/api/visits/patient/{{patientId}}/timeline"
+          }
+        },
+        {
+          "name": "Delete Patient",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{clinicToken}}" }],
+            "url": "{{baseUrl}}/api/patients/{{patientId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2) Visit Booking + Queue (Quick)",
+      "item": [
+        {
+          "name": "Book Visit (today)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const json = pm.response.json();", "const visit = json?.data;", "if (visit?._id) pm.collectionVariables.set('visitId', visit._id);", "if (visit?.serialNo) pm.collectionVariables.set('serialNo', String(visit.serialNo));"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{clinicToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/visits/book",
+            "body": { "mode": "raw", "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"visitDate\": \"{{today}}\",\n  \"doctorId\": \"{{doctor1Id}}\",\n  \"visitType\": \"new\"\n}" }
+          }
+        },
+        { "name": "Get Date Visits", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{clinicToken}}" }], "url": "{{baseUrl}}/api/visits?date={{today}}" } },
+        { "name": "Get Visit By Serial", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{clinicToken}}" }], "url": "{{baseUrl}}/api/visits/queue/by-serial?date={{today}}&serialNo={{serialNo}}" } }
+      ]
+    }
+  ]
+}
